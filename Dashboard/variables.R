@@ -64,3 +64,33 @@ getR0 <- function(country){
   R0_table$R0 <- R0_values
   R0_table
 }
+
+drawPlot <- function(plot, colors){
+  plot <- plot +
+    scale_color_manual(values = colors) +
+    theme_minimal() +
+    theme(
+      text = element_text(size = 15),
+      axis.line = element_blank(),
+      axis.text.x = element_text(color = "black", angle=45),
+      axis.text.y = element_text(color = "black"),
+      plot.background = element_rect(fill = "gray96", color = NA),
+      panel.border = element_rect(linetype = "dashed", fill = NA),
+      panel.background = element_rect(fill = "gray96", color = NA),
+      panel.grid = element_line(color = "black"),
+      legend.background = element_rect(fill = "gray96", color = NA),
+      plot.title = element_text(size = 15, hjust = 0.5, face = "bold"))
+  ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105))
+}
+
+drawLinePlot <- function(plot, colors){
+  plot <-  plot +
+    scale_x_date(date_labels = "%b %d", date_minor_breaks = "1 day", date_breaks="1 week") 
+  drawPlot(plot, colors) 
+}
+
+showTable <- function(data, variable){
+  data %>% select(COUNTRY, !!variable) %>% 
+    group_by(COUNTRY) %>% summarize(!!variable := sum(!!as.name(variable), na.rm=TRUE)) %>%
+    arrange(desc(!!as.name(variable))) %>% slice(0:5)
+}
