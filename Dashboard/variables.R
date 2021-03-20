@@ -43,9 +43,9 @@ getAccumData <- function(data){
   accumulated <- data %>% group_by(COUNTRY) %>%
     summarize(CONTAGIADOS=sum(CONTAGIADOS,na.rm=TRUE),
               FALLECIDOS=sum(FALLECIDOS,na.rm=TRUE),
-              RECUPERADOS=sum(RECUPERADOS,na.rm=TRUE),
-              HOSPITALIZADOS=sum(HOSPITALIZADOS,na.rm=TRUE),
-              UCIs=sum(UCIs,na.rm=TRUE))
+              RECUPERADOS=sum(RECUPERADOS,na.rm=TRUE))
+              #HOSPITALIZADOS=sum(HOSPITALIZADOS,na.rm=TRUE),
+              #UCIs=sum(UCIs,na.rm=TRUE))
   accumulated
 }
 
