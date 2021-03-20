@@ -21,11 +21,13 @@ for (lib in packages){
 
 # Read the data from the dataset
 data <- read.csv("dataset.csv")
+#data <- read.csv("worldWithoutUSA.csv")
 data[is.na(data)] = 0
 
 # Rename the columns of the dataset
-data <- data %>% rename(COUNTRY = COUNTRY, DATE = FECHA, INFECTED = CONTAGIADOS, DEATHS = FALLECIDOS, RECOVERIES = RECUPERADOS, 
-	HOSPITALIZATIONS = HOSPITALIZADOS,ICUs = UCIs) %>% mutate(DATE = as.Date(DATE, format="%d/%m/%Y"))
+data <- data %>% rename(COUNTRY = COUNTRY, DATE = FECHA, INFECTED = CONTAGIADOS, DEATHS = FALLECIDOS, RECOVERIES = RECUPERADOS,
+   HOSPITALIZATIONS = HOSPITALIZADOS,ICUs = UCIs) %>% mutate(DATE = as.Date(DATE, format="%d/%m/%Y"))
+    #%>% mutate(COUNTRY = toupper(COUNTRY))
 
 # Complementary file for functions
 source("variables.R")
@@ -38,6 +40,9 @@ spdf@data$NAME <- toupper(spdf@data$NAME)
 countries <- unique(data$COUNTRY)
 variablesGraph <- names(data)[-c(1, 2)]
 variablesMap <- c(names(data)[-c(1,2)])
+#variablesGraph <- names(data)[-c(1,2,3,4,5,6,7,8,9,10,14,15)]
+#variablesMap <- c(names(data)[-c(1,2,3,4,5,6,7,8,9,10,14,15)])
+
 
 # Filter parameters and choices
 modes = c("Multiple Countries" = "mc", "Multiple Variables" = "mv")
@@ -119,10 +124,10 @@ server <- function(input, output) {
     
     # Global data table
     output$totalCases <- renderText({
-        sum(data$INFECTED, nar.rm=TRUE)
+        sum(data$INFECTED, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
     })
     output$totalDeaths <- renderText({
-        sum(data$DEATHS, nar.rm=TRUE)
+        sum(data$DEATHS, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
     })
     
     observeEvent({
@@ -167,7 +172,7 @@ server <- function(input, output) {
                     output$selectedVarGraph <- renderText({paste0("Countries by number of ", tolower(input$variable_mv[1]))})
                     showTable(data, input$variable_mv[1])
                 }
-            })
+            }, digits = 0) 
     })
 
     # Map Functions 
@@ -194,10 +199,11 @@ server <- function(input, output) {
             maxNum <- (max(spdf@data[[column]], na.rm = TRUE))
             df <- spdf@data
             labs <- lapply(seq(nrow(df)), function(i) {
-                paste0(df[i, "NAME"], '<br>', df[i, column])
+                num <- format(df[i, column], big.mark = ',', scientific=FALSE)
+                paste0(df[i, "NAME"], '<br>', num)
             })
             mybins <- c(0, maxNum %/% 25, maxNum %/% 20, maxNum %/% 10, maxNum %/% 7 , maxNum %/% 5, maxNum %/% 2, (maxNum * 3) %/% 4, maxNum)
-            mypalette <- colorBin( palette ="PuBu", domain=as.numeric(spdf@data[[column]]), na.color="transparent", bins=mybins)
+            mypalette <- colorBin( palette ="YlOrRd", domain=as.numeric(spdf@data[[column]]), na.color="transparent", bins=mybins)
             tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
             output$map <- renderLeaflet({
                 leaflet(spdf) %>%

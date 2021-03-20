@@ -90,7 +90,9 @@ drawLinePlot <- function(plot, colors){
 }
 
 showTable <- function(data, variable){
-  data %>% select(COUNTRY, !!variable) %>% 
+  df <- data %>% select(COUNTRY, !!variable) %>% 
     group_by(COUNTRY) %>% summarize(!!variable := sum(!!as.name(variable), na.rm=TRUE)) %>%
     arrange(desc(!!as.name(variable))) %>% slice(0:5)
+  df[[2]] <- format(df[[2]], big.mark = ',', scientific = FALSE)
+  df
 }
