@@ -25,20 +25,25 @@ data <- read.csv("worldWithoutUSA.csv")
 data[is.na(data)] = 0
 
 # Rename the columns of the dataset
-#data <- data %>% rename(COUNTRY = COUNTRY, DATE = FECHA, INFECTED = CONTAGIADOS, DEATHS = FALLECIDOS, RECOVERIES = RECUPERADOS,
-#   HOSPITALIZATIONS = HOSPITALIZADOS,ICUs = UCIs) %>% mutate(DATE = as.Date(DATE, format="%d/%m/%Y"))
-    #%>% mutate(COUNTRY = toupper(COUNTRY))
 data <- data %>% 
     rename(COUNTRY = Country_Region, DATE = Last_Update1, 
            INFECTED = Daily_Confirmed, DEATHS = Daily_Deaths, RECOVERIES = Daily_Recovered) %>% 
     mutate(DATE = as.Date(DATE, format="%Y-%m-%d"), COUNTRY = toupper(COUNTRY))
+data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
+                            "NORTH MACEDONIA" = "MACEDONIA",
+                            "CONGO (KINSHASA)" = "DEMOCRATIC REPUBLIC OF THE CONGO",
+                            "CONGO (BRAZZAVILLE)" = "CONGO")) 
 
 # Complementary file for functions
 source("variables.R")
 
 # Prepare data for map
-spdf = readOGR(dsn=getwd(), layer="TM_WORLD_BORDERS_SIMPL-0.3")
-spdf@data$NAME <- toupper(spdf@data$NAME)
+spdf = readOGR(dsn=getwd(), layer="World_Countries")
+spdf@data$COUNTRY <- toupper(spdf@data$COUNTRY)
+spdf@data <- spdf@data %>% mutate(COUNTRY = recode(COUNTRY, 
+                                                   "MYANMAR" = "VIETNAM",
+                                                   "IVORY COAST" = "COTE D'IVOIRE",
+                                                   "FRENCH GUIANA (FRANCE)" = "FRENCH GUIANA"))   
 
 # Prepare variables for select box
 countries <- unique(data$COUNTRY)
@@ -194,17 +199,14 @@ server <- function(input, output) {
                 group_by(COUNTRY) %>%
                 summarize(INFECTED=sum(INFECTED,na.rm=TRUE),
                           DEATHS=sum(DEATHS,na.rm=TRUE),
-                          RECOVERIES=sum(RECOVERIES,na.rm=TRUE)) %>%
-                          #HOSPITALIZATIONS=sum(HOSPITALIZATIONS,na.rm=TRUE),
-                          #ICUs=sum(ICUs,na.rm=TRUE)) %>%
-                rename(NAME = COUNTRY)
-            spdf@data <- left_join(spdf@data, mapdf, by = "NAME")
+                          RECOVERIES=sum(RECOVERIES,na.rm=TRUE))
+            spdf@data <- left_join(spdf@data, mapdf, by = "COUNTRY")
             column <- input$variableMap
             maxNum <- (max(spdf@data[[column]], na.rm = TRUE))
             df <- spdf@data
             labs <- lapply(seq(nrow(df)), function(i) {
                 num <- format(df[i, column], big.mark = ',', scientific=FALSE)
-                paste0(df[i, "NAME"], '<br>', num)
+                paste0(df[i, "COUNTRY"], '<br>', num)
             })
             mybins <- c(0, maxNum %/% 25, maxNum %/% 20, maxNum %/% 10, maxNum %/% 7 , maxNum %/% 5, maxNum %/% 2, (maxNum * 3) %/% 4, maxNum)
             mypalette <- colorBin( palette ="YlOrRd", domain=as.numeric(spdf@data[[column]]), na.color="transparent", bins=mybins)
