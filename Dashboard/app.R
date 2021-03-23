@@ -22,6 +22,7 @@ for (lib in packages){
 # Read the data from the dataset
 #data <- read.csv("dataset.csv")
 data <- read.csv("worldWithoutUSA.csv")
+#data <- bind_rows(read.csv("DataUSA.csv"), data)
 data[is.na(data)] = 0
 
 # Rename the columns of the dataset
@@ -30,6 +31,7 @@ data <- data %>%
            INFECTED = Daily_Confirmed, DEATHS = Daily_Deaths, RECOVERIES = Daily_Recovered) %>% 
     mutate(DATE = as.Date(DATE, format="%Y-%m-%d"), COUNTRY = toupper(COUNTRY))
 data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
+                            "US" = "UNITED STATES",
                             "NORTH MACEDONIA" = "MACEDONIA",
                             "CONGO (KINSHASA)" = "DEMOCRATIC REPUBLIC OF THE CONGO",
                             "CONGO (BRAZZAVILLE)" = "CONGO")) 
@@ -41,6 +43,17 @@ source("variables.R")
 spdf = readOGR(dsn=getwd(), layer="World_Countries")
 spdf@data$COUNTRY <- toupper(spdf@data$COUNTRY)
 spdf@data <- spdf@data %>% mutate(COUNTRY = recode(COUNTRY, 
+                                                   "FAROE ISLANDS (DENMARK)" = "FAROE ISLANDS",
+                                                   "GREENLAND (DENMARK)" = "DENMARK",
+                                                   "SVALBARD (NORWAY)" = "NORWAY",
+                                                   "JAN MAYEN (NORWAY)" = "NORWAY",
+                                                   "PUERTO RICO (US)" = "PUERTO RICO",
+                                                   "ARUBA (NETHERLANDS)" = "ARUBA",
+                                                   "CURACAO (NETHERLANDS)" = "CURACAO",
+                                                   "GUADELOUPE (FRANCE)" = "GUADELOUPE",
+                                                   "MARTINIQUE (FRANCE)" = "MARTINIQUE",
+                                                   "ST. LUCIA" = "SAINT LUCIA",
+                                                   "ST. VINCENT AND THE GRENADINES" = "SAINT VINCENT AND THE GRENADINES",
                                                    "MYANMAR" = "VIETNAM",
                                                    "IVORY COAST" = "COTE D'IVOIRE",
                                                    "FRENCH GUIANA (FRANCE)" = "FRENCH GUIANA"))   
