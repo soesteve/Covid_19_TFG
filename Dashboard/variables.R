@@ -90,6 +90,10 @@ drawLinePlot <- function(plot, colors){
 }
 
 showTable <- function(data, variable){
+  if(substr(variable, 1, 11) == "CUMULATIVE_"){
+    variable <- sub("CUMULATIVE_", "", variable)
+    print(variable)
+  }
   df <- data %>% select(COUNTRY, !!variable) %>% 
     group_by(COUNTRY) %>% summarize(!!variable := sum(!!as.name(variable), na.rm=TRUE)) %>%
     arrange(desc(!!as.name(variable))) %>% slice(0:5)

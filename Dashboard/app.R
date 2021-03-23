@@ -22,19 +22,31 @@ for (lib in packages){
 # Read the data from the dataset
 #data <- read.csv("dataset.csv")
 data <- read.csv("worldWithoutUSA.csv")
-#data <- bind_rows(read.csv("DataUSA.csv"), data)
+data <- bind_rows(read.csv("DataUSA.csv"), data)
 data[is.na(data)] = 0
 
 # Rename the columns of the dataset
 data <- data %>% 
     rename(COUNTRY = Country_Region, DATE = Last_Update1, 
-           INFECTED = Daily_Confirmed, DEATHS = Daily_Deaths, RECOVERIES = Daily_Recovered) %>% 
+           INFECTED = Daily_Confirmed,
+           DEATHS = Daily_Deaths,
+           RECOVERED = Daily_Recovered,
+           CUMULATIVE_INFECTED = Confirmed,
+           CUMULATIVE_DEATHS = Deaths,
+           CUMULATIVE_RECOVERED = Recovered) %>% 
     mutate(DATE = as.Date(DATE, format="%Y-%m-%d"), COUNTRY = toupper(COUNTRY))
 data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
                             "US" = "UNITED STATES",
                             "NORTH MACEDONIA" = "MACEDONIA",
                             "CONGO (KINSHASA)" = "DEMOCRATIC REPUBLIC OF THE CONGO",
                             "CONGO (BRAZZAVILLE)" = "CONGO")) 
+data <- data %>% group_by(COUNTRY, DATE) %>% 
+    summarize(INFECTED = sum(INFECTED),
+              DEATHS = sum(DEATHS),
+              RECOVERED = sum(RECOVERED),
+              CUMULATIVE_INFECTED = sum(CUMULATIVE_INFECTED),
+              CUMULATIVE_DEATHS = sum(CUMULATIVE_DEATHS),
+              CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED))
 
 # Complementary file for functions
 source("variables.R")
@@ -62,8 +74,8 @@ spdf@data <- spdf@data %>% mutate(COUNTRY = recode(COUNTRY,
 countries <- unique(data$COUNTRY)
 #variablesGraph <- names(data)[-c(1, 2)]
 #variablesMap <- c(names(data)[-c(1,2)])
-variablesGraph <- names(data)[-c(1,2,3,4,5,6,7,8,9,10,14,15)]
-variablesMap <- c(names(data)[-c(1,2,3,4,5,6,7,8,9,10,14,15)])
+variablesGraph <- names(data)[c(3:8)]
+variablesMap <- (names(data)[c(3,4,5)])
 
 
 # Filter parameters and choices
@@ -212,7 +224,7 @@ server <- function(input, output) {
                 group_by(COUNTRY) %>%
                 summarize(INFECTED=sum(INFECTED,na.rm=TRUE),
                           DEATHS=sum(DEATHS,na.rm=TRUE),
-                          RECOVERIES=sum(RECOVERIES,na.rm=TRUE))
+                          RECOVERED=sum(RECOVERED,na.rm=TRUE))
             spdf@data <- left_join(spdf@data, mapdf, by = "COUNTRY")
             column <- input$variableMap
             maxNum <- (max(spdf@data[[column]], na.rm = TRUE))
