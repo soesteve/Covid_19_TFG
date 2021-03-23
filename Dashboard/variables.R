@@ -85,18 +85,31 @@ drawPlot <- function(plot, colors){
 
 drawLinePlot <- function(plot, colors){
   plot <-  plot +
-    scale_x_date(date_labels = "%b %d", date_minor_breaks = "1 day", date_breaks="1 week") 
+    scale_x_date(date_labels = "%b %d", date_minor_breaks = "1 day", date_breaks="1 week") +
+    scale_y_continuous(labels=scales::comma) 
   drawPlot(plot, colors) 
 }
 
 showTable <- function(data, variable){
   if(substr(variable, 1, 11) == "CUMULATIVE_"){
     variable <- sub("CUMULATIVE_", "", variable)
-    print(variable)
   }
   df <- data %>% select(COUNTRY, !!variable) %>% 
     group_by(COUNTRY) %>% summarize(!!variable := sum(!!as.name(variable), na.rm=TRUE)) %>%
     arrange(desc(!!as.name(variable))) %>% slice(0:5)
+  df[[2]] <- format(df[[2]], big.mark = ',', scientific = FALSE)
+  df
+}
+
+showCountryTable <- function(data, countryString, date){
+  df <- data %>% filter(COUNTRY == toupper(countryString), between(DATE, as.Date("2020-03-08", "%Y-%m-%d"), date)) %>% 
+    summarize(INFECTED=sum(INFECTED,na.rm=TRUE),
+              DEATHS=sum(DEATHS,na.rm=TRUE),
+              RECOVERED=sum(RECOVERED,na.rm=TRUE))
+  variables <- colnames(df)[2:4]
+  values <- c(df[[2]], df[[3]], df[[4]])
+  df <- data.frame(variables, values)
+  df <- unname(df)
   df[[2]] <- format(df[[2]], big.mark = ',', scientific = FALSE)
   df
 }

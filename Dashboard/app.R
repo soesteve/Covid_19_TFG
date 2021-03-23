@@ -143,7 +143,11 @@ ui <- fluidPage(
                 wellPanel(
                     h3(textOutput("selectedVarMap")),
                     hr(),
-                    tableOutput(outputId = "mapTable")
+                    tableOutput(outputId = "mapTable"),
+                    hr(),
+                    h3(textOutput("selectedCountryMap")),
+                    hr(),
+                    tableOutput(outputId = "countryTable")
                 )
             )
         )
@@ -252,11 +256,25 @@ server <- function(input, output) {
                             fillOpacity=0.7,
                             bringToFront=TRUE),
                         label=lapply(labs, HTML),
+                        layerId = sapply(slot(spdf, "polygons"), function(x) slot(x, "ID")),
                         labelOptions = labelOptions(
                             style = list("font-weight" = "normal"),
                             textsize = "15px",
                             direction = "auto")) %>% 
                     addLegend(pal = mypalette, values = ~spdf@data[[column]], opacity = 0.7, title = "Legend",position = "bottomleft")
+        })
+    })
+    
+    observeEvent(input$map_shape_click, {
+        country <- input$map_shape_click
+        id <- as.numeric(country["id"]) + 1
+        countryString <- spdf@data$COUNTRY[id]
+        countryString <- tolower(countryString)
+        char <- substr(countryString, 0, 1)
+        countryString <- sub(char, toupper(char), countryString)
+        output$selectedCountryMap <- renderText({countryString})
+        output$countryTable <- renderTable({
+            showCountryTable(data, countryString, input$mapSlider)
         })
     })
 }
