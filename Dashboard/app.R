@@ -8,79 +8,59 @@
 #
 
 # List of packages used
-packages <- c("shiny", "leaflet", "dplyr", "leaflet.minicharts", "ggplot2", "rgdal", "reshape2", "htmltools", "plotly")
+#packages <- c("shiny", "leaflet", "dplyr", "leaflet.minicharts", "ggplot2", "rgdal", "reshape2", "htmltools", "plotly")
 
 # Check if each package is installed (if not, install them) and load them
-for (lib in packages){
-    if (!require(lib, character.only=TRUE)){
-        install.packages(lib, character.only=TRUE, dependencies=TRUE)
-        library(lib, character.only = TRUE)
-    }
-}
+#for (lib in packages){
+#    if (!require(lib, character.only=TRUE)){
+#        install.packages(lib, character.only=TRUE, dependencies=TRUE)
+#        library(lib, character.only = TRUE)
+#    }
+#}
 
+library(shiny)
+library(leaflet)
+library(dplyr)
+library(leaflet.minicharts)
+library(ggplot2)
+library(rgdal)
+library(reshape2)
+library(htmltools)
+library(plotly)
 
 # Read the data from the dataset
-#data <- read.csv("dataset.csv")
 data <- read.csv("worldWithoutUSA.csv")
-data <- bind_rows(read.csv("DataUSA.csv"), data)
+#data <- bind_rows(read.csv("DataUSA.csv"), data)
 data[is.na(data)] = 0
 
-# Rename the columns of the dataset
-data <- data %>% 
-    rename(COUNTRY = Country_Region, DATE = Last_Update1, 
-           INFECTED = Daily_Confirmed,
-           DEATHS = Daily_Deaths,
-           RECOVERED = Daily_Recovered,
-           CUMULATIVE_INFECTED = Confirmed,
-           CUMULATIVE_DEATHS = Deaths,
-           CUMULATIVE_RECOVERED = Recovered) %>% 
-    mutate(DATE = as.Date(DATE, format="%Y-%m-%d"), COUNTRY = toupper(COUNTRY))
-data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
-                            "US" = "UNITED STATES",
-                            "NORTH MACEDONIA" = "MACEDONIA",
-                            "CONGO (KINSHASA)" = "DEMOCRATIC REPUBLIC OF THE CONGO",
-                            "CONGO (BRAZZAVILLE)" = "CONGO")) 
-data <- data %>% group_by(COUNTRY, DATE) %>% 
-    summarize(INFECTED = sum(INFECTED),
-              DEATHS = sum(DEATHS),
-              RECOVERED = sum(RECOVERED),
-              CUMULATIVE_INFECTED = sum(CUMULATIVE_INFECTED),
-              CUMULATIVE_DEATHS = sum(CUMULATIVE_DEATHS),
-              CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED))
-
 # Complementary file for functions
-source("variables.R")
+source("functions.R")
+
+# Rename the columns of the dataset
+data <- renameColumns(data)
 
 # Prepare data for map
 spdf = readOGR(dsn=getwd(), layer="World_Countries")
 spdf@data$COUNTRY <- toupper(spdf@data$COUNTRY)
-spdf@data <- spdf@data %>% mutate(COUNTRY = recode(COUNTRY, 
-                                                   "FAROE ISLANDS (DENMARK)" = "FAROE ISLANDS",
-                                                   "GREENLAND (DENMARK)" = "DENMARK",
-                                                   "SVALBARD (NORWAY)" = "NORWAY",
-                                                   "JAN MAYEN (NORWAY)" = "NORWAY",
-                                                   "PUERTO RICO (US)" = "PUERTO RICO",
-                                                   "ARUBA (NETHERLANDS)" = "ARUBA",
-                                                   "CURACAO (NETHERLANDS)" = "CURACAO",
-                                                   "GUADELOUPE (FRANCE)" = "GUADELOUPE",
-                                                   "MARTINIQUE (FRANCE)" = "MARTINIQUE",
-                                                   "ST. LUCIA" = "SAINT LUCIA",
-                                                   "ST. VINCENT AND THE GRENADINES" = "SAINT VINCENT AND THE GRENADINES",
-                                                   "MYANMAR" = "VIETNAM",
-                                                   "IVORY COAST" = "COTE D'IVOIRE",
-                                                   "FRENCH GUIANA (FRANCE)" = "FRENCH GUIANA"))   
+spdf@data <- recodeCountries(spdf@data)
+tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+mapdf <- data %>% 
+    mutate(CONFIRMED = CUMULATIVE_CONFIRMED,
+           DEATHS = CUMULATIVE_DEATHS,
+           RECOVERED = CUMULATIVE_RECOVERED)
 
-# Prepare variables for select box
+# Prepare variables for select boxes and radio buttons
 countries <- unique(data$COUNTRY)
-#variablesGraph <- names(data)[-c(1, 2)]
-#variablesMap <- c(names(data)[-c(1,2)])
-variablesGraph <- names(data)[c(3:8)]
-variablesMap <- (names(data)[c(3,4,5)])
-
+variablesGraph <- names(data)[c(3:9)]
+variablesMap <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
 
 # Filter parameters and choices
 modes = c("Multiple Countries" = "mc", "Multiple Variables" = "mv")
 graphTypes = c("Line Graph" = "line", "Box Plot" = "box")
+
+# Starting date and last update of the dataset
+startDate <- as.Date("2020-03-08")
+endDate <- as.Date("2021-03-01")
 
 # Dashboard UI
 ui <- fluidPage(
@@ -89,40 +69,39 @@ ui <- fluidPage(
             fluidRow(
                 column(width = 3, 
                     wellPanel(
-                        h2("Global number of cases"),
-                        hr(),
-                        h3(textOutput("totalCases")),
+                        h3("Global cases"),
+                        h4(textOutput("totalCases")),
                         br(),
-                        h2("Global number of deaths"),
-                        hr(),
-                        h3(textOutput("totalDeaths"))
+                        h3("Global deaths"),
+                        h4(textOutput("totalDeaths"))
                     )
                 ),
                 column(width = 3,
                     wellPanel(
-                        h2(textOutput("selectedVarGraph")),
                         tableOutput(outputId = "graphTable")
                     )
                 ),
                 column(width = 6,
                     wellPanel(
-                        h2("Filter"),
-                        hr(),
                         fluidRow(
                             column(width = 6,
-                                column(width=6, radioButtons(inputId = "mode", label = "Choose", choices = modes)),
-                                column(width=6, radioButtons(inputId = "graph", label = "Graph Type", choices = graphTypes)),
-                                sliderInput(inputId = "date", label = "Date", min = as.Date("2020-03-08","%Y-%m-%d"), max = Sys.Date(),
-                                            value=c(as.Date("2020-03-08", "%Y-%m-%d"), Sys.Date()), timeFormat="%b %d %Y")
+                                column(width=6, radioButtons(inputId = "mode", label = "Mode:", choices = modes)),
+                                conditionalPanel("input.mode == 'mc'",
+                                    column(width=6, radioButtons(inputId = "graph", label = "Graph Type:", choices = graphTypes))
+                                ),
+                                column(width=12,
+                                    sliderInput(inputId = "date", label = "Date:", min = startDate, max = endDate,
+                                                value=c(endDate - 6 * 30, Sys.Date()), timeFormat="%b %d %Y")
+                                )
                             ),
                             column(width = 6,
                                 conditionalPanel("input.mode == 'mc'",
-                                    selectizeInput(inputId = "country_mc", label = "Choose a country", choices = countries, multiple = TRUE, selected = countries[1], options = list(maxItems = 5)),
-                                    selectInput(inputId = "variable_mc", label = "Choose a variable", choices = variablesGraph)
+                                    selectizeInput(inputId = "country_mc", label = "Choose countries:", choices = countries, multiple = TRUE, selected = countries[1], options = list(maxItems = 5)),
+                                    selectInput(inputId = "variable_mc", label = "Choose a variable:", choices = variablesGraph)
                                 ),
                                 conditionalPanel("input.mode == 'mv'",
-                                    selectInput(inputId = "country_mv", label = "Choose a country", choices = countries),
-                                    selectInput(inputId = "variable_mv", label = "Choose a variable", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1])
+                                    selectInput(inputId = "country_mv", label = "Choose a country:", choices = countries),
+                                    selectInput(inputId = "variable_mv", label = "Choose variables:", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1])
                                 )                   
                             )
                         )
@@ -130,24 +109,25 @@ ui <- fluidPage(
                 )
             ),
             mainPanel(width = 12,
-                plotlyOutput(outputId = "plot", height = 600)
+                plotlyOutput(outputId = "plot", height = 400)
             ),
         ),
         tabPanel("Map",
-            leafletOutput(outputId = "map", width = "100%", height = 950),
+            leafletOutput(outputId = "map", width = "100%", height = 600),
             absolutePanel(top = 150, left = 25,
-                sliderInput(inputId = "mapSlider", "Date", min=as.Date("2020-03-09","%Y-%m-%d"), max=Sys.Date(), value=Sys.Date(), timeFormat="%b %d %Y"),
+                sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y"),
                 radioButtons(inputId = "variableMap", label = "Choose a variable", choices =  variablesMap),
             ),
-            absolutePanel(top = 50, right = 100, width = 250,
+            absolutePanel(top = 50, right = 20, width = 250,
+                wellPanel(
+                    h3(textOutput("selectedCountryMap")),
+                    tableOutput(outputId = "countryTable")
+                )
+            ),
+            absolutePanel(bottom = 380, right = 20, width = 250,
                 wellPanel(
                     h3(textOutput("selectedVarMap")),
-                    hr(),
-                    tableOutput(outputId = "mapTable"),
-                    hr(),
-                    h3(textOutput("selectedCountryMap")),
-                    hr(),
-                    tableOutput(outputId = "countryTable")
+                    tableOutput(outputId = "mapTable")
                 )
             )
         )
@@ -156,31 +136,29 @@ ui <- fluidPage(
 
 # Dashboard server function
 server <- function(input, output) {
-
-    # Graph Functions
+    # Graph colors
     colors <- c("darkslateblue", "gold", "indianred3", "forestgreen", "gray45")
     
     # Global data table
     output$totalCases <- renderText({
-        sum(data$INFECTED, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
+        sum(data$DAILY_CONFIRMED, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
     })
     output$totalDeaths <- renderText({
-        sum(data$DEATHS, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
+        sum(data$DAILY_DEATHS, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
     })
     
     observeEvent({
         input$graph
         input$mode
         }, {
-            
             #Graph Plot
             output$plot <- renderPlotly({
                 if(input$mode == "mc"){
                     dfReactive <- reactive({getCases(data, input$country_mc, input$variable_mc) %>% filter(between(DATE, input$date[1], input$date[2]))})
-                    if(is.null(input$country_mc))
+                    if(is.null(input$country_mc) || dim(dfReactive())[1] == 0)
                         ggplot()
                     else if(input$graph == "line"){
-                        p <- ggplot(dfReactive(), mapping = aes_string(x="DATE", y=input$variable_mc, color="COUNTRY")) + geom_line()
+                        p <- ggplot(dfReactive(), mapping = aes_string(x="DATE", y=input$variable_mc, color="COUNTRY")) + geom_line() + geom_point(size=0.9)
                         drawLinePlot(p, colors)
                     }
                     else if(input$graph == "box"){
@@ -190,12 +168,12 @@ server <- function(input, output) {
                 }
                 else if(input$mode == "mv"){
                     dfReactive <- reactive({getVariables(data, input$country_mv, input$variable_mv) %>% filter(between(DATE, input$date[1], input$date[2]))})
-                        if(is.null(input$variable_mv))
-                            ggplot()
-                        else {
-                            p <- ggplot(dfReactive(), mapping = aes_string(x="DATE", y="value", color="variable")) + geom_line()
-                            drawLinePlot(p, colors)
-                        }
+                    if(is.null(input$variable_mv) || dim(dfReactive())[1] == 0)
+                        ggplot()
+                    else {
+                        p <- ggplot(dfReactive(), mapping = aes_string(x="DATE", y="value", color="variable")) + geom_line() + geom_point(size=0.9)
+                        drawLinePlot(p, colors)
+                    }
                 }
             })
             
@@ -203,12 +181,12 @@ server <- function(input, output) {
             output$graphTable <-renderTable({ 
                 
                 if(input$mode == "mc"){
-                    output$selectedVarGraph <- renderText({paste0("Countries by number of ", tolower(input$variable_mv[1]))})
-                    showTable(data, input$variable_mc)
+                    #output$selectedVarGraph <- renderText({paste0("Countries by number of ", tolower(input$variable_mv[1]))})
+                    showTable(data, input$variable_mc, input$date[2])
                 }
-                else {
-                    output$selectedVarGraph <- renderText({paste0("Countries by number of ", tolower(input$variable_mv[1]))})
-                    showTable(data, input$variable_mv[1])
+                else if(!is.null(input$variable_mv[1])){
+                    #output$selectedVarGraph <- renderText({paste0("Countries by number of ", tolower(input$variable_mv[1]))})
+                    showTable(data, input$variable_mv[1], input$date[2])
                 }
             }, digits = 0) 
     })
@@ -217,64 +195,65 @@ server <- function(input, output) {
     observeEvent({
         input$mapSlider
         input$variableMap
-        }, {
-            output$mapTable <-renderTable({ 
-                showTable(data, input$variableMap)
-            })
-        
-            output$selectedVarMap <- renderText({paste0("Global ", tolower(input$variableMap), " cases")})
-            
-            mapdf <- data %>% filter(between(DATE, as.Date("2020-03-08", "%Y-%m-%d"), input$mapSlider)) %>% 
-                group_by(COUNTRY) %>%
-                summarize(INFECTED=sum(INFECTED,na.rm=TRUE),
-                          DEATHS=sum(DEATHS,na.rm=TRUE),
-                          RECOVERED=sum(RECOVERED,na.rm=TRUE))
+        }, { 
+            # Set variables for map data
+            varString <- input$variableMap
+            if(varString != "ACTIVE")
+                column <- paste0("CUMULATIVE_", input$variableMap)
+            mapdf <- mapdf %>% filter(DATE == input$mapSlider) 
             spdf@data <- left_join(spdf@data, mapdf, by = "COUNTRY")
-            column <- input$variableMap
-            maxNum <- (max(spdf@data[[column]], na.rm = TRUE))
+            mypalette <- setPalette(spdf@data, column)
             df <- spdf@data
             labs <- lapply(seq(nrow(df)), function(i) {
                 num <- format(df[i, column], big.mark = ',', scientific=FALSE)
                 paste0(df[i, "COUNTRY"], '<br>', num)
             })
-            mybins <- c(0, maxNum %/% 25, maxNum %/% 20, maxNum %/% 10, maxNum %/% 7 , maxNum %/% 5, maxNum %/% 2, (maxNum * 3) %/% 4, maxNum)
-            mypalette <- colorBin( palette ="YlOrRd", domain=as.numeric(spdf@data[[column]]), na.color="transparent", bins=mybins)
-            tilesURL <- "http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+            
+            output$mapTable <-renderTable({ 
+                showTable(mapdf, column, input$mapSlider)
+            })
+            
+            output$selectedVarMap <- renderText({paste0("Global ", tolower(varString), " cases")})
+            
             output$map <- renderLeaflet({
                 leaflet(spdf) %>%
-                    addTiles(tilesURL) %>%
-                    setView(lng = 40.2085, lat = -3.713, zoom = 2.5) %>%
-                    addPolygons(data = spdf,
-                        fillColor = ~mypalette(as.numeric(spdf@data[[column]])),
-                        weight = 0.05,
-                        opacity = 1,
-                        color = "white",
-                        dashArray = "3",
-                        fillOpacity = 0.7,
-                        highlight = highlightOptions(weight=3,
-                            color="gray",
-                            fillOpacity=0.7,
-                            bringToFront=TRUE),
-                        label=lapply(labs, HTML),
-                        layerId = sapply(slot(spdf, "polygons"), function(x) slot(x, "ID")),
-                        labelOptions = labelOptions(
-                            style = list("font-weight" = "normal"),
-                            textsize = "15px",
-                            direction = "auto")) %>% 
-                    addLegend(pal = mypalette, values = ~spdf@data[[column]], opacity = 0.7, title = "Legend",position = "bottomleft")
-        })
+                addTiles(tilesURL) %>%
+                setView(lng = 40.2085, lat = -3.713, zoom = 2)  %>% 
+                addLegend(pal = mypalette, values = ~spdf@data[[column]],
+                          opacity = 0.7, title = "Legend",position = "bottomleft") %>%
+                addPolygons(data = spdf,
+                    fillColor = ~mypalette(as.numeric(spdf@data[[column]])),
+                    weight = 0.05,
+                    opacity = 1,
+                    color = "white",
+                    dashArray = "3",
+                    fillOpacity = 0.7,
+                    highlight = highlightOptions(weight=3,
+                        color="gray",
+                        fillOpacity=0.7,
+                        bringToFront=TRUE),
+                    layerId = sapply(slot(spdf, "polygons"), function(x) slot(x, "ID")),
+                    label=lapply(labs, HTML),
+                    labelOptions = labelOptions(
+                        style = list("font-weight" = "normal"),
+                        textsize = "15px",
+                        direction = "auto"))
+            })
+    })
+    
+    # Initial table set text
+    output$selectedCountryMap <- renderText({"Spain"})
+    output$countryTable <- renderTable({
+        showCountryTable(mapdf, "SPAIN", isolate(input$mapSlider))
     })
     
     observeEvent(input$map_shape_click, {
         country <- input$map_shape_click
-        id <- as.numeric(country["id"]) + 1
-        countryString <- spdf@data$COUNTRY[id]
-        countryString <- tolower(countryString)
-        char <- substr(countryString, 0, 1)
-        countryString <- sub(char, toupper(char), countryString)
+        countryString <- getCountryName(spdf@data$COUNTRY, country)
+        
         output$selectedCountryMap <- renderText({countryString})
         output$countryTable <- renderTable({
-            showCountryTable(data, countryString, input$mapSlider)
+            showCountryTable(mapdf, countryString, input$mapSlider)
         })
     })
 }
