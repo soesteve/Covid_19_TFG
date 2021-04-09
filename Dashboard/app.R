@@ -30,7 +30,7 @@ library(plotly)
 
 # Read the data from the dataset
 data <- read.csv("worldWithoutUSA.csv")
-data <- bind_rows(read.csv("DataUSA.csv"), data)
+#data <- bind_rows(read.csv("DataUSA.csv"), data)
 data[is.na(data)] = 0
 
 # Complementary file for functions
@@ -51,7 +51,7 @@ mapdf <- data %>%
 
 # Prepare variables for select boxes and radio buttons
 countries <- unique(data$COUNTRY)
-variablesGraph <- names(data)[-c(1:2)]
+variablesGraph <- names(data)[c(3:9)]
 variablesMap <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
 
 # Filter parameters and choices
@@ -115,7 +115,7 @@ ui <- fluidPage(
         tabPanel("Map",
             leafletOutput(outputId = "map", width = "100%", height = 600),
             absolutePanel(top = 150, left = 25,
-                sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="60%"),
+                sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y"),
                 radioButtons(inputId = "variableMap", label = "Choose a variable", choices =  variablesMap),
             ),
             absolutePanel(top = 50, right = 20, width = 250,
@@ -124,7 +124,7 @@ ui <- fluidPage(
                     tableOutput(outputId = "countryTable")
                 )
             ),
-            absolutePanel(top = 320, right = 20, width = 250,
+            absolutePanel(bottom = 380, right = 20, width = 250,
                 wellPanel(
                     h3(textOutput("selectedVarMap")),
                     tableOutput(outputId = "mapTable")
@@ -220,7 +220,7 @@ server <- function(input, output) {
                 addTiles(tilesURL) %>%
                 setView(lng = 40.2085, lat = -3.713, zoom = 2)  %>% 
                 addLegend(pal = mypalette, values = ~spdf@data[[column]],
-                          opacity = 0.5, title = "Legend",position = "bottomleft") %>%
+                          opacity = 0.7, title = "Legend",position = "bottomleft") %>%
                 addPolygons(data = spdf,
                     fillColor = ~mypalette(as.numeric(spdf@data[[column]])),
                     weight = 0.05,

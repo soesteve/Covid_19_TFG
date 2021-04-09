@@ -28,9 +28,7 @@ renameColumns <- function(data){
               ACTIVE = sum(ACTIVE),
               CUMULATIVE_CONFIRMED = sum(CUMULATIVE_CONFIRMED),
               CUMULATIVE_DEATHS = sum(CUMULATIVE_DEATHS),
-              CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED),
-              DANGER_INDEX = sum(IP))
-  data <- data %>% group_by(COUNTRY) %>% mutate(R0 = getR0(DAILY_CONFIRMED))
+              CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED))
   data
 }
 
@@ -66,24 +64,19 @@ getVariables <- function(data, country, variable){
   melt(getCases(data, country, variable), id.vars=c("COUNTRY", "DATE"))
 }
 
-getR0 <- function(R0_data){
+getR0 <- function(country){
+  R0_table <- data %>% filter(COUNTRY==country) %>%
+    mutate(FECHA=as.Date(FECHA, "%d/%m/%Y")) %>% arrange(FECHA) %>%
+    summarize(FECHA=FECHA, CONTAGIADOS=CONTAGIADOS)
   
-  n <- length(R0_data)
-  R0 <- rep(0,n)
-  if(n >= 15){
-    for(i in 15:n){
-      if(R0_data[i] != 0 && R0_data[i-14] != 0){
-        R0[i] <- R0_data[i] / R0_data[i-14]
-      } else {
-        R0[i] <- R0[i-1]
-      }
-    }
-    
-    for(i in 1:14) {
-      R0[i] <- R0[15]
-    }
+  R0_values <- list()
+  n <- length(R0_table$CONTAGIADOS)
+  for(i in 1:n){
+    R0_values[i] = R0_table$CONTAGIADOS[i] / R0_table$CONTAGIADOS[1]
   }
-  R0
+  
+  R0_table$R0 <- R0_values
+  R0_table
 }
 
 drawPlot <- function(plot, colors){
@@ -112,17 +105,17 @@ drawLinePlot <- function(plot, colors){
 }
 
 showTable <- function(data, variable, date){
-  if (variable == "R0" || variable == "DANGER_INDEX"){
-    variable <- "CUMULATIVE_CONFIRMED"
-  } else if(substr(variable, 1, 5) == "DAILY"){
+  if(substr(variable, 1, 5) == "DAILY"){
     variable <- sub("DAILY", "CUMULATIVE", variable)
   }
+  
   
   df <- data %>% filter(DATE == date) %>% select(COUNTRY, !!variable) %>% 
     arrange(desc(!!as.name(variable)))
   if(variable != "ACTIVE"){
     str <- substring(variable, 12)
     df <- df %>% rename(!!str := variable)
+    
   }
   
   df[[2]] <- format(df[[2]], big.mark = ',', scientific = FALSE)
