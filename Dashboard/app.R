@@ -19,6 +19,7 @@
 #}
 
 library(shiny)
+library(shinydashboard)
 library(leaflet)
 library(dplyr)
 library(leaflet.minicharts)
@@ -63,81 +64,109 @@ startDate <- as.Date("2020-03-08")
 endDate <- as.Date("2021-03-01")
 
 # Dashboard UI
-ui <- fluidPage(
+
+header <- dashboardHeader(disable = TRUE)
+
+sidebar <- dashboardSidebar(disable = TRUE)
+
+body <- dashboardBody(
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+        tags$script('
+      // Define function to set height of "map" and "map_container"
+      setHeight = function() {
+        var window_height = $(window).height();
+        var header_height = $(".main-header").height();
+
+        var boxHeight = window_height - header_height;
+
+        $("#map").height(boxHeight - 20);
+        $("#mapTable").css("top", boxHeight - 265);
+        $("#graphBox").height(boxHeight - 280);
+        $("#plot").height(boxHeight - 305);
+      };
+
+      // Set input$box_height when the connection is established
+      $(document).on("shiny:connected", function(event) {
+        setHeight();
+      });
+
+      // Refresh the box height on every window resize event    
+      $(window).on("resize", function(){
+        setHeight();
+      });
+    ')),
     tabsetPanel(
         tabPanel(title = "Graph",
             fluidRow(
-                column(width = 3, 
-                    wellPanel(
-                        h3("Global cases"),
-                        h4(textOutput("totalCases")),
-                        br(),
-                        h3("Global deaths"),
-                        h4(textOutput("totalDeaths"))
-                    )
+                box(width = 2, height = 200, status="primary",
+                    h3("Global cases"),
+                    h4(textOutput("totalCases")),
+                    h3("Global deaths"),
+                    h4(textOutput("totalDeaths"))
                 ),
-                column(width = 3,
-                    wellPanel(
-                        tableOutput(outputId = "graphTable")
-                    )
+                box(width = 3, height = 200, status="primary",
+                    tableOutput(outputId = "graphTable")
                 ),
-                column(width = 6,
-                    wellPanel(
-                        fluidRow(
-                            column(width = 6,
-                                column(width=6, radioButtons(inputId = "mode", label = "Mode:", choices = modes)),
-                                conditionalPanel("input.mode == 'mc'",
-                                    column(width=6, radioButtons(inputId = "graph", label = "Graph Type:", choices = graphTypes))
-                                ),
-                                column(width=12,
-                                    sliderInput(inputId = "date", label = "Date:", min = startDate, max = endDate,
-                                                value=c(endDate - 6 * 30, Sys.Date()), timeFormat="%b %d %Y")
-                                )
+                box(width = 7, height = 200, status="primary",
+                    fluidRow(
+                        column(id = "filterBox", width = 6,
+                            column(width=7, radioButtons(inputId = "mode", label = "Mode:", choices = modes)),
+                            conditionalPanel("input.mode == 'mc'",
+                                column(width=5, radioButtons(inputId = "graph", label = "Graph Type:", choices = graphTypes))
                             ),
-                            column(width = 6,
-                                conditionalPanel("input.mode == 'mc'",
-                                    selectizeInput(inputId = "country_mc", label = "Choose countries:", choices = countries, multiple = TRUE, selected = countries[1], options = list(maxItems = 5)),
-                                    selectInput(inputId = "variable_mc", label = "Choose a variable:", choices = variablesGraph)
-                                ),
-                                conditionalPanel("input.mode == 'mv'",
-                                    selectInput(inputId = "country_mv", label = "Choose a country:", choices = countries),
-                                    selectInput(inputId = "variable_mv", label = "Choose variables:", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1])
-                                )                   
+                            column(width=12,
+                                sliderInput(inputId = "date", label = "Date:", min = startDate, max = endDate,
+                                            value=c(endDate - 6 * 30, Sys.Date()), timeFormat="%b %d %Y")
                             )
+                        ),
+                        column(width = 6,
+                            conditionalPanel("input.mode == 'mc'",
+                                selectizeInput(inputId = "country_mc", label = "Choose countries:", choices = countries, multiple = TRUE, selected = countries[1], options = list(maxItems = 5)),
+                                selectInput(inputId = "variable_mc", label = "Choose a variable:", choices = variablesGraph)
+                            ),
+                            conditionalPanel("input.mode == 'mv'",
+                                selectInput(inputId = "country_mv", label = "Choose a country:", choices = countries),
+                                selectInput(inputId = "variable_mv", label = "Choose variables:", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1])
+                            )                   
                         )
                     )
+                
                 )
+        
             ),
-            mainPanel(width = 12,
-                plotlyOutput(outputId = "plot", height = 400)
-            ),
+            box(id = "content", width = 12, status="primary",
+                plotlyOutput(outputId = "plot")
+            )
         ),
         tabPanel("Map",
-            leafletOutput(outputId = "map", width = "100%", height = 600),
-            absolutePanel(top = 150, left = 25,
-                sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="60%"),
-                radioButtons(inputId = "variableMap", label = "Choose a variable", choices =  variablesMap),
-            ),
-            absolutePanel(top = 50, right = 20, width = 250,
-                wellPanel(
-                    h3(textOutput("selectedCountryMap")),
-                    tableOutput(outputId = "countryTable")
-                )
-            ),
-            absolutePanel(top = 320, right = 20, width = 250,
-                wellPanel(
-                    h3(textOutput("selectedVarMap")),
-                    tableOutput(outputId = "mapTable")
-                )
-            )
-        )
+             leafletOutput(outputId = "map", width = "100%", height = 610),
+             absolutePanel(top = 150, left = 30,
+                 sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="80%"),
+                 radioButtons(inputId = "variableMap", label = "Choose a variable", choices =  variablesMap),
+             ),
+             absolutePanel(top = 70, right = 20, width = 250,
+                 box(width = 12, status="primary",
+                     h2(textOutput("selectedCountryMap")),
+                     tableOutput(outputId = "countryTable")
+                 )
+             ),
+             absolutePanel(id = "mapTable", right = 20, width = 250,
+                 box(width = 12, status="primary",
+                     h2("Global Cases"),
+                     tableOutput(outputId = "mapTable")
+                 )
+             )
+         )
     )
 )
+
+ui <- dashboardPage(header, sidebar, body)
 
 # Dashboard server function
 server <- function(input, output) {
     # Graph colors
-    colors <- c("darkslateblue", "gold", "indianred3", "forestgreen", "gray45")
+    colors <- c("darkslateblue", "indianred3", "gold", "forestgreen", "gray45")
     
     # Global data table
     output$totalCases <- renderText({
@@ -198,6 +227,7 @@ server <- function(input, output) {
         }, { 
             # Set variables for map data
             varString <- input$variableMap
+            column <- varString
             if(varString != "ACTIVE")
                 column <- paste0("CUMULATIVE_", input$variableMap)
             mapdf <- mapdf %>% filter(DATE == input$mapSlider) 
@@ -212,8 +242,6 @@ server <- function(input, output) {
             output$mapTable <-renderTable({ 
                 showTable(mapdf, column, input$mapSlider)
             })
-            
-            output$selectedVarMap <- renderText({paste0("Global ", tolower(varString), " cases")})
             
             output$map <- renderLeaflet({
                 leaflet(spdf) %>%
@@ -244,7 +272,7 @@ server <- function(input, output) {
     # Initial table set text
     output$selectedCountryMap <- renderText({"Spain"})
     output$countryTable <- renderTable({
-        showCountryTable(mapdf, "SPAIN", isolate(input$mapSlider))
+        showCountryTable(mapdf, "SPAIN", input$mapSlider)
     })
     
     observeEvent(input$map_shape_click, {

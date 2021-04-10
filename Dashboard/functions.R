@@ -30,7 +30,7 @@ renameColumns <- function(data){
               CUMULATIVE_DEATHS = sum(CUMULATIVE_DEATHS),
               CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED),
               DANGER_INDEX = sum(IP))
-  data <- data %>% group_by(COUNTRY) %>% mutate(R0 = getR0(DAILY_CONFIRMED))
+  data <- data %>% group_by(COUNTRY) %>% mutate(R0 = getR0(DAILY_CONFIRMED) %>% round(digits = 2))
   data
 }
 
