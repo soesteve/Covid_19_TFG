@@ -30,15 +30,14 @@ library(htmltools)
 library(plotly)
 
 # Read the data from the dataset
-data <- read.csv("worldWithoutUSA.csv")
-data <- bind_rows(read.csv("DataUSA.csv"), data)
-data[is.na(data)] = 0
+data <- read.csv("datasetCODA.csv")
+data <- data %>% mutate(DATE = as.Date(DATE, format="%Y-%m-%d"))
 
 # Complementary file for functions
 source("functions.R")
 
 # Rename the columns of the dataset
-data <- renameColumns(data)
+#data <- renameColumns(data)
 
 # Prepare data for map
 spdf = readOGR(dsn=getwd(), layer="World_Countries")
@@ -52,7 +51,7 @@ mapdf <- data %>%
 
 # Prepare variables for select boxes and radio buttons
 countries <- unique(data$COUNTRY)
-variablesGraph <- names(data)[-c(1:2)]
+variablesGraph <- names(data)[-c(1:3)]
 variablesMap <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
 
 # Filter parameters and choices

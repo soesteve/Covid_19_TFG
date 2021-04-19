@@ -1,61 +1,3 @@
-#Functions to get data about a given country:
-
-renameColumns <- function(data){
-  data <- data %>% 
-    rename(COUNTRY = Country_Region, DATE = Last_Update1, 
-           DAILY_CONFIRMED = Daily_Confirmed,
-           DAILY_DEATHS = Daily_Deaths,
-           DAILY_RECOVERED = Daily_Recovered,
-           CUMULATIVE_CONFIRMED = Confirmed,
-           CUMULATIVE_DEATHS = Deaths,
-           CUMULATIVE_RECOVERED = Recovered,
-           ACTIVE = Active) %>% 
-    mutate(DATE = as.Date(DATE, format="%Y-%m-%d"), COUNTRY = toupper(COUNTRY))
-  data <- data  %>% filter(!COUNTRY  %in% c("SOUTH KOREA", "TAIWAN", "CZECH REPUBLIC", "EAST TIMOR")) %>% 
-                      mutate(COUNTRY = recode(COUNTRY, 
-                                           "TIMOR-LESTE" = "EAST TIMOR",
-                                           "CZECHIA" = "CZECH REPUBLIC",
-                                           "US" = "UNITED STATES",
-                                           "NORTH MACEDONIA" = "MACEDONIA",
-                                           "CONGO (KINSHASA)" = "DEMOCRATIC REPUBLIC OF THE CONGO",
-                                           "CONGO (BRAZZAVILLE)" = "CONGO",
-                                           "KOREA, SOUTH" = "SOUTH KOREA",
-                                           "TAIWAN*" = "TAIWAN"))
-  data <- data %>% group_by(COUNTRY, DATE) %>%
-    summarize(DAILY_CONFIRMED = sum(DAILY_CONFIRMED),
-              DAILY_DEATHS = sum(DAILY_DEATHS),
-              DAILY_RECOVERED = sum(DAILY_RECOVERED),
-              ACTIVE = sum(ACTIVE),
-              CUMULATIVE_CONFIRMED = sum(CUMULATIVE_CONFIRMED),
-              CUMULATIVE_DEATHS = sum(CUMULATIVE_DEATHS),
-              CUMULATIVE_RECOVERED = sum(CUMULATIVE_RECOVERED),
-              DANGER_INDEX = sum(IP))
-  data <- data %>% group_by(COUNTRY) %>% mutate(R0 = getR0(DAILY_CONFIRMED) %>% round(digits = 2))
-  data
-}
-
-recodeCountries <- function(data){
-  data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
-                                           "SOUTH GEORGIA AND THE SOUTH SANDWICH IS (UK)" = "SOUTH GEORGIA AND THE SOUTH SANDWICH (UK)",
-                                           "REUNION (FRANCE)" = "REUNION",
-                                           "SWAZILAND" = "ESWATINI",
-                                           "FAROE ISLANDS (DENMARK)" = "FAROE ISLANDS",
-                                           "GREENLAND (DENMARK)" = "DENMARK",
-                                           "SVALBARD (NORWAY)" = "NORWAY",
-                                           "JAN MAYEN (NORWAY)" = "NORWAY",
-                                           "PUERTO RICO (US)" = "PUERTO RICO",
-                                           "ARUBA (NETHERLANDS)" = "ARUBA",
-                                           "CURACAO (NETHERLANDS)" = "CURACAO",
-                                           "GUADELOUPE (FRANCE)" = "GUADELOUPE",
-                                           "MARTINIQUE (FRANCE)" = "MARTINIQUE",
-                                           "ST. LUCIA" = "SAINT LUCIA",
-                                           "ST. VINCENT AND THE GRENADINES" = "SAINT VINCENT AND THE GRENADINES",
-                                           "MYANMAR" = "VIETNAM",
-                                           "IVORY COAST" = "COTE D'IVOIRE",
-                                           "FRENCH GUIANA (FRANCE)" = "FRENCH GUIANA"))
-  data
-}
-
 getCases <- function(data, country, variable){
   aux <- data %>% filter(COUNTRY %in% country)
   result <- aux %>% select(COUNTRY, DATE, variable)
@@ -112,7 +54,8 @@ drawLinePlot <- function(plot, colors){
 }
 
 showTable <- function(data, variable, date){
-  if (variable == "R0" || variable == "DANGER_INDEX"){
+  extra_variables <- c("R0", "INC", "DANGER_INDEX")
+  if (variable %in% extra_variables){
     variable <- "CUMULATIVE_CONFIRMED"
   } else if(substr(variable, 1, 5) == "DAILY"){
     variable <- sub("DAILY", "CUMULATIVE", variable)
