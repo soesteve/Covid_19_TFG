@@ -32,6 +32,7 @@ library(plotly)
 # Read the data from the dataset
 data <- read.csv("datasetCODA.csv")
 data <- data %>% mutate(DATE = as.Date(DATE, format="%Y-%m-%d"))
+data[is.na(data)] = 0
 
 # Complementary file for functions
 source("functions.R")
@@ -52,7 +53,7 @@ mapdf <- data %>%
 # Prepare variables for select boxes and radio buttons
 countries <- unique(data$COUNTRY)
 variablesGraph <- names(data)[-c(1:3)]
-variablesMap <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
+variablesMap <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE", "DANGER_INDEX", "R0", "INC")
 
 # Filter parameters and choices
 modes = c("Multiple Countries" = "mc", "Multiple Variables" = "mv")
@@ -126,7 +127,7 @@ body <- dashboardBody(
                             ),
                             conditionalPanel("input.mode == 'mv'",
                                 selectInput(inputId = "country_mv", label = "Choose a country:", choices = countries),
-                                selectInput(inputId = "variable_mv", label = "Choose variables:", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1])
+                                selectizeInput(inputId = "variable_mv", label = "Choose variables:", choices = variablesGraph, multiple = TRUE, selected = variablesGraph[1], options = list(maxItems = 5))
                             )                   
                         )
                     )
@@ -142,7 +143,7 @@ body <- dashboardBody(
              leafletOutput(outputId = "map", width = "100%", height = 610),
              absolutePanel(top = 150, left = 30,
                  sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="80%"),
-                 radioButtons(inputId = "variableMap", label = "Choose a variable", choices =  variablesMap),
+                 selectizeInput(inputId = "variableMap", label = "Choose a variable:", choices = list(Cumulative = variablesMap[c(1:4)], Daily = variablesMap[c(5:7)]), selected = variablesMap[1]),
              ),
              absolutePanel(top = 70, right = 20, width = 250,
                  box(width = 12, status="primary",
@@ -191,7 +192,7 @@ server <- function(input, output) {
                     }
                     else if(input$graph == "box"){
                         p <- ggplot(dfReactive(), mapping = aes_string(x="COUNTRY", y=input$variable_mc, color="COUNTRY")) + geom_boxplot()
-                        drawPlot(p, colors)
+                        drawBoxPlot(p, colors)
                     }
                 }
                 else if(input$mode == "mv"){
@@ -227,7 +228,7 @@ server <- function(input, output) {
             # Set variables for map data
             varString <- input$variableMap
             column <- varString
-            if(varString != "ACTIVE")
+            if(varString %in% c("CONFIRMED", "DEATHS", "RECOVERED"))
                 column <- paste0("CUMULATIVE_", input$variableMap)
             mapdf <- mapdf %>% filter(DATE == input$mapSlider) 
             spdf@data <- left_join(spdf@data, mapdf, by = "COUNTRY")
