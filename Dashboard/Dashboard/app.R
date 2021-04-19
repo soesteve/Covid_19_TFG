@@ -80,9 +80,8 @@ body <- dashboardBody(
 
         var boxHeight = window_height - header_height;
 
-        $("#map").height(boxHeight - 20);
-        $("#mapTable").css("top", boxHeight - 265);
-        $("#graphBox").height(boxHeight - 280);
+        $("#map").height(boxHeight - 50);
+        $("#mapTable").css("top", boxHeight - 320);
         $("#plot").height(boxHeight - 305);
       };
 
@@ -142,18 +141,20 @@ body <- dashboardBody(
         tabPanel("Map",
              leafletOutput(outputId = "map", width = "100%", height = 610),
              absolutePanel(top = 150, left = 30,
-                 sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="80%"),
-                 selectizeInput(inputId = "variableMap", label = "Choose a variable:", choices = list(Cumulative = variablesMap[c(1:4)], Daily = variablesMap[c(5:7)]), selected = variablesMap[1]),
+                 sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="150px"),
+                 selectizeInput(inputId = "variableMap", label = "Choose a variable:", choices = list(Cumulative = variablesMap[c(1:4)], Daily = variablesMap[c(5:7)]), selected = variablesMap[1], width = "150px"),
              ),
              absolutePanel(top = 70, right = 20, width = 250,
                  box(width = 12, status="primary",
                      h2(textOutput("selectedCountryMap")),
+                     h5("(Cumulative values)"),
                      tableOutput(outputId = "countryTable")
                  )
              ),
              absolutePanel(id = "mapTable", right = 20, width = 250,
                  box(width = 12, status="primary",
                      h2("Global Cases"),
+                     h5("(Cumulative values)"),
                      tableOutput(outputId = "mapTable")
                  )
              )

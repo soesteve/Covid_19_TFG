@@ -50,6 +50,8 @@ getR0 <- function(R0_data){
   R0
 }
 
+toolbarButtons <- c("toImage", "zoom2d", "select2d", "lasso2d", "hoverCompareCartesian", "hoverClosestCartesian", "autoScale2d")
+
 drawBoxPlot <- function(plot, colors){
   plot <- plot +
     scale_color_manual(values = colors) +
@@ -65,7 +67,7 @@ drawBoxPlot <- function(plot, colors){
       panel.grid = element_line(color = "black"),
       legend.background = element_rect(fill = "gray96", color = NA),
       plot.title = element_text(size = 15, hjust = 0.5, face = "bold"))
-  ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105))
+  ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105)) %>% config(modeBarButtonsToRemove = toolbarButtons, displaylogo = FALSE)
 }
 
 drawLinePlot <- function(plot, colors){
@@ -85,7 +87,7 @@ drawLinePlot <- function(plot, colors){
       panel.grid = element_line(color = "black"),
       legend.background = element_rect(fill = "gray96", color = NA),
       plot.title = element_text(size = 15, hjust = 0.5, face = "bold"))
-    ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105))
+    ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105)) %>% config(modeBarButtonsToRemove = toolbarButtons, displaylogo = FALSE)
 }
 
 showTable <- function(data, variable, date){
