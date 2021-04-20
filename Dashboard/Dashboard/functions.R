@@ -115,7 +115,7 @@ showCountryTable <- function(data, countryString, date){
   variables <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
   values <- c(NA, NA, NA, NA)
   if(dim(df)[1] != 0) {
-    values <- c(df[[7]], df[[8]], df[[9]], df[[6]])
+    values <- c(df$CONFIRMED, df$DEATHS, df$RECOVERED, df$ACTIVE)
   }
   df <- data.frame(variables, values)
   df <- unname(df)
