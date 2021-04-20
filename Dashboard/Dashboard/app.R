@@ -153,7 +153,7 @@ body <- dashboardBody(
              ),
              absolutePanel(id = "mapTable", right = 20, width = 250,
                  box(width = 12, status="primary",
-                     h2("Global Cases"),
+                     h2("Top Countries"),
                      h5("(Cumulative values)"),
                      tableOutput(outputId = "mapTable")
                  )
