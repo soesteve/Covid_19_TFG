@@ -22,7 +22,6 @@ library(shiny)
 library(shinydashboard)
 library(leaflet)
 library(dplyr)
-library(leaflet.minicharts)
 library(ggplot2)
 library(rgdal)
 library(reshape2)
@@ -31,8 +30,8 @@ library(plotly)
 
 # Read the data from the dataset
 data <- read.csv("datasetCODA.csv")
-data <- data %>% mutate(DATE = as.Date(DATE, format="%Y-%m-%d"))
 data[is.na(data)] = 0
+data <- data %>% mutate(DATE = as.Date(DATE, format="%Y-%m-%d"))
 
 # Complementary file for functions
 source("functions.R")

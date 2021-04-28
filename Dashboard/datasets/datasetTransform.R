@@ -1,4 +1,3 @@
-library(spData)
 library(dplyr)
 
 getR0 <- function(R0_data){
@@ -34,9 +33,10 @@ getRawINC <- function(INC_data) {
 }
 
 
-data <- read.csv("worldWithoutUSA(1).csv")
+data <- read.csv("worldWithoutUSA.csv")
 data <- bind_rows(read.csv("DataUSaV0_2.csv"), data)
-populationDF <- data.frame(COUNTRY = toupper(world$name_long), POP = world$pop)
+populationDF <- read.csv("WPP2019_TotalPopulationBySex.csv")
+populationDF <- populationDF %>% filter(Time == 2020, Variant == "High") %>% rename(COUNTRY = Location, POP = PopTotal)
 data <- data %>% 
   rename(COUNTRY = Country_Region, DATE = Last_Update1, 
          DAILY_CONFIRMED = Daily_Confirmed,
