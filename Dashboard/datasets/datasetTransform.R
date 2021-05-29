@@ -68,6 +68,6 @@ data <- data %>% group_by(COUNTRY, DATE) %>%
             DANGER_INDEX = sum(IP))
 data <- left_join(data, populationDF, by = "COUNTRY")
 data <- data %>% group_by(COUNTRY) %>% mutate(R0 = getR0(DAILY_CONFIRMED) %>% round(digits = 2))
-data <- data %>% group_by(COUNTRY) %>% mutate(INC = (getRawINC(DAILY_CONFIRMED) * 100000/POP) %>% round(digits = 2)) %>% select(-POP)
+data <- data %>% group_by(COUNTRY) %>% mutate(INC = (getRawINC(DAILY_CONFIRMED) * 100000/(POP*1000)) %>% round(digits = 2)) %>% select(-POP)
 
 write.csv(data, "datasetCODA.csv")
