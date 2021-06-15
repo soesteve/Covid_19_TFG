@@ -1,3 +1,5 @@
+# Rename some country names to coincide with 
+# country names in the map.
 recodeCountries <- function(data){
   data <- data %>% mutate(COUNTRY = recode(COUNTRY, 
                                            "SOUTH GEORGIA AND THE SOUTH SANDWICH IS (UK)" = "SOUTH GEORGIA AND THE SOUTH SANDWICH (UK)",
@@ -16,42 +18,30 @@ recodeCountries <- function(data){
                                            "ST. VINCENT AND THE GRENADINES" = "SAINT VINCENT AND THE GRENADINES",
                                            "MYANMAR" = "VIETNAM",
                                            "IVORY COAST" = "COTE D'IVOIRE",
-                                           "FRENCH GUIANA (FRANCE)" = "FRENCH GUIANA"))
+                                           "FRENCH GUIANA (FRANCE)" = "GUYANA"))
   data
 }
 
+# Fetch a column from dataframe 'data' given 
+# the 'country' and the 'variable' to be fetched.
+# Used for multiple countries mode.
 getCases <- function(data, country, variable){
   aux <- data %>% filter(COUNTRY %in% country)
   result <- aux %>% select(COUNTRY, DATE, variable)
   result
 }
 
+# Fetch a column from dataframe 'data' given 
+# the 'country' and the 'variable' to be fetched.
+# Used for multiple variables mode.
 getVariables <- function(data, country, variable){
   melt(getCases(data, country, variable), id.vars=c("COUNTRY", "DATE"))
 }
 
-getR0 <- function(R0_data){
-  
-  n <- length(R0_data)
-  R0 <- rep(0,n)
-  if(n >= 15){
-    for(i in 15:n){
-      if(R0_data[i] != 0 && R0_data[i-14] != 0){
-        R0[i] <- R0_data[i] / R0_data[i-14]
-      } else {
-        R0[i] <- R0[i-1]
-      }
-    }
-    
-    for(i in 1:14) {
-      R0[i] <- R0[15]
-    }
-  }
-  R0
-}
-
 toolbarButtons <- c("toImage", "zoom2d", "select2d", "lasso2d", "hoverCompareCartesian", "hoverClosestCartesian", "autoScale2d")
 
+# Function to draw a Box Plot in the graph
+# and define its layers and elements.
 drawBoxPlot <- function(plot, colors){
   plot <- plot +
     scale_color_manual(values = colors) +
@@ -64,12 +54,14 @@ drawBoxPlot <- function(plot, colors){
       plot.background = element_rect(fill = "gray96", color = NA),
       panel.border = element_rect(linetype = "dashed", fill = NA),
       panel.background = element_rect(fill = "gray96", color = NA),
-      panel.grid = element_line(color = "black"),
+      panel.grid = element_line(color = "gray65"),
       legend.background = element_rect(fill = "gray96", color = NA),
       plot.title = element_text(size = 15, hjust = 0.5, face = "bold"))
   ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105)) %>% config(modeBarButtonsToRemove = toolbarButtons, displaylogo = FALSE)
 }
 
+# Function to draw a Line Graph in the graph
+# and define its layers and elements.
 drawLinePlot <- function(plot, colors){
   plot <-  plot +
     scale_x_date(date_labels = "%b %d", date_minor_breaks = "1 day", date_breaks="1 week") +
@@ -84,18 +76,23 @@ drawLinePlot <- function(plot, colors){
       plot.background = element_rect(fill = "gray96", color = NA),
       panel.border = element_rect(linetype = "dashed", fill = NA),
       panel.background = element_rect(fill = "gray96", color = NA),
-      panel.grid = element_line(color = "black"),
+      panel.grid = element_line(color = "gray65"),
       legend.background = element_rect(fill = "gray96", color = NA),
       plot.title = element_text(size = 15, hjust = 0.5, face = "bold"))
     ggplotly(plot) %>% layout(legend = list(orientation = 'h', y= 105)) %>% config(modeBarButtonsToRemove = toolbarButtons, displaylogo = FALSE)
 }
 
+# Function to draw the table in the Graph UI
+# from the dataframe 'data' and given the 'variable'
+# to be shown in the table.
 showTable <- function(data, variable, date){
-  extra_variables <- c("R0", "INC", "DANGER_INDEX")
+  extra_variables <- c("R0", "INC", "DANGER_INDEX", "SMOOTH_R0", "SMOOTH_DI", "SMOOTH_ACTIVE", "SMOOTH_INC")
   if (variable %in% extra_variables){
     variable <- "CUMULATIVE_CONFIRMED"
   } else if(substr(variable, 1, 5) == "DAILY"){
     variable <- sub("DAILY", "CUMULATIVE", variable)
+  } else if(substr(variable, 1, 6) == "SMOOTH"){
+    variable <- sub("SMOOTH", "CUMULATIVE", variable)
   }
   
   df <- data %>% filter(DATE == date) %>% select(COUNTRY, !!variable) %>% 
@@ -110,6 +107,9 @@ showTable <- function(data, variable, date){
   df
 }
 
+# Function to draw the table in the Map UI
+# from the dataframe 'data' and given the 'countryString'
+# to be shown in the table.
 showCountryTable <- function(data, countryString, date){
   df <- data %>% filter(COUNTRY == toupper(countryString), DATE == date)
   variables <- c("CONFIRMED", "DEATHS", "RECOVERED", "ACTIVE")
@@ -123,6 +123,8 @@ showCountryTable <- function(data, countryString, date){
   df
 }
 
+# Auxiliary function to fetch the 'country' name
+# of the region associated with a clicked event in the map.
 getCountryName <- function(data, country){
   id <- as.numeric(country["id"]) + 1
   countryString <- tolower(data[id])
@@ -131,6 +133,8 @@ getCountryName <- function(data, country){
   countryString
 }
 
+# Function to set the color palette and the 
+# partitions of the legend used in the Map UI.
 setPalette <- function(data, variable){
   colorPalette <- c("#FFFFCC", "#FFEDA0", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#BD0026")
   maxNum <- (max(data[[variable]], na.rm = TRUE))

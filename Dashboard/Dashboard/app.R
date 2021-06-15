@@ -36,9 +36,6 @@ data <- data %>% mutate(DATE = as.Date(DATE, format="%Y-%m-%d"))
 # Complementary file for functions
 source("functions.R")
 
-# Rename the columns of the dataset
-#data <- renameColumns(data)
-
 # Prepare data for map
 spdf = readOGR(dsn=getwd(), layer="World_Countries")
 spdf@data$COUNTRY <- toupper(spdf@data$COUNTRY)
@@ -60,7 +57,7 @@ graphTypes = c("Line Graph" = "line", "Box Plot" = "box")
 
 # Starting date and last update of the dataset
 startDate <- as.Date("2020-03-08")
-endDate <- as.Date("2021-03-01")
+endDate <- as.Date("2021-05-12")
 
 # Dashboard UI
 
@@ -140,7 +137,7 @@ body <- dashboardBody(
         tabPanel("Map",
              leafletOutput(outputId = "map", width = "100%", height = 610),
              absolutePanel(top = 150, left = 30,
-                 sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="150px"),
+                 sliderInput(inputId = "mapSlider", "Date", startDate, endDate, endDate, timeFormat="%b %d %Y", width="200px"),
                  selectizeInput(inputId = "variableMap", label = "Choose a variable:", choices = list(Cumulative = variablesMap[c(1:4)], Daily = variablesMap[c(5:7)]), selected = variablesMap[1], width = "150px"),
              ),
              absolutePanel(top = 70, right = 20, width = 250,
@@ -165,6 +162,8 @@ ui <- dashboardPage(header, sidebar, body)
 
 # Dashboard server function
 server <- function(input, output) {
+    # Graph functions
+    
     # Graph colors
     colors <- c("darkslateblue", "indianred3", "gold", "forestgreen", "gray45")
     
@@ -176,6 +175,7 @@ server <- function(input, output) {
         sum(data$DAILY_DEATHS, nar.rm=TRUE) %>% format(big.mark=",",scientific=FALSE)
     })
     
+    # Radio buttons observer
     observeEvent({
         input$graph
         input$mode
@@ -221,6 +221,8 @@ server <- function(input, output) {
     })
 
     # Map Functions 
+    
+    # Map Data Slider and Select Box observer
     observeEvent({
         input$mapSlider
         input$variableMap
@@ -239,10 +241,12 @@ server <- function(input, output) {
                 paste0(df[i, "COUNTRY"], '<br>', num)
             })
             
+            # Global cases information table
             output$mapTable <-renderTable({ 
                 showTable(mapdf, column, input$mapSlider)
             })
             
+            # Map rendering
             output$map <- renderLeaflet({
                 leaflet(spdf) %>%
                 addTiles(tilesURL) %>%
@@ -269,12 +273,13 @@ server <- function(input, output) {
             })
     })
     
-    # Initial table set text
+    # Initialize country specific table
     output$selectedCountryMap <- renderText({"Spain"})
     output$countryTable <- renderTable({
         showCountryTable(mapdf, "SPAIN", input$mapSlider)
     })
     
+    # Map click observer
     observeEvent(input$map_shape_click, {
         country <- input$map_shape_click
         countryString <- getCountryName(spdf@data$COUNTRY, country)
